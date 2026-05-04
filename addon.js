@@ -7,8 +7,8 @@ const manifest = {
     id: "metaverse",
     version: "1.0.0",
     name: "Metaverse",
-    description: "The only addon for Metadata for stremio",
-    logo: "images/logo.png",
+    description: "The only Metadata addon for stremio",
+    logo: "https://forzayt.github.io/Metaverse_Stremio_Addon/images/logo.png",
     resources: ["catalog", "meta"],
     types: ["movie"],
     catalogs: [
