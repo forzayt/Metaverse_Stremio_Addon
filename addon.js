@@ -83,18 +83,6 @@ const manifest = {
         },
         {
             type: "movie",
-            id: "disney_movies",
-            name: "Metaverse Disney+",
-            extra: [{ name: "search" }, { name: "skip" }]
-        },
-        {
-            type: "series",
-            id: "disney_series",
-            name: "Metaverse Disney+",
-            extra: [{ name: "search" }, { name: "skip" }]
-        },
-        {
-            type: "movie",
             id: "apple_movies",
             name: "Metaverse Apple TV+",
             extra: [{ name: "search" }, { name: "skip" }]
@@ -115,18 +103,6 @@ const manifest = {
             type: "series",
             id: "hulu_series",
             name: "Metaverse Hulu",
-            extra: [{ name: "search" }, { name: "skip" }]
-        },
-        {
-            type: "movie",
-            id: "manorama_movies",
-            name: "Metaverse Manorama Max",
-            extra: [{ name: "search" }, { name: "skip" }]
-        },
-        {
-            type: "series",
-            id: "manorama_series",
-            name: "Metaverse Manorama Max",
             extra: [{ name: "search" }, { name: "skip" }]
         },
         {
@@ -219,20 +195,16 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
         results = responses.filter(r => r !== null).flatMap(r => r.results || []);
     } else if (id === "netflix_movies" || id === "netflix_series" || 
                id === "prime_movies" || id === "prime_series" || 
-               id === "disney_movies" || id === "disney_series" || 
                id === "apple_movies" || id === "apple_series" || 
                id === "hulu_movies" || id === "hulu_series" ||
-               id === "manorama_movies" || id === "manorama_series" ||
                id === "sony_movies" || id === "sony_series" ||
                id === "zee_movies" || id === "zee_series") {
         
         const providerIds = {
             netflix: 8,
             prime: "119|9",
-            disney: 122,
             apple: 350,
             hulu: 15,
-            manorama: 432,
             sony: 237,
             zee: 232
         };
