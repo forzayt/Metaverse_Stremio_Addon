@@ -39,27 +39,41 @@ async function tmdbToImdb(tmdbId) {
 
 /* Malayalam Catalog */
 builder.defineCatalogHandler(async ({ type, id, extra }) => {
-    if (type !== "movie" || id !== "malluflix_catalog") return { metas: [] };
+    if (type !== "movie" || id !== "metaverse_catalog") return { metas: [] };
 
     const skip = extra?.skip ? parseInt(extra.skip) : 0;
     const page = Math.round(skip / 20) + 1;
     const today = new Date().toISOString().split('T')[0];
 
-    // Fetch 3 pages to ensure sufficient content
-    const promises = [page, page + 1, page + 2].map(p =>
-        axios.get("https://api.themoviedb.org/3/discover/movie", {
+    let results = [];
+
+    if (extra?.search) {
+        // Handle search
+        const res = await axios.get("https://api.themoviedb.org/3/search/movie", {
             params: {
                 api_key: TMDB_KEY,
-                with_original_language: "ml",
-                "primary_release_date.lte": today,
-                sort_by: "primary_release_date.desc",
-                page: p
+                query: extra.search,
+                page: 1
             }
-        })
-    );
+        });
+        results = res.data.results || [];
+    } else {
+        // Fetch 3 pages to ensure sufficient content
+        const promises = [page, page + 1, page + 2].map(p =>
+            axios.get("https://api.themoviedb.org/3/discover/movie", {
+                params: {
+                    api_key: TMDB_KEY,
+                    with_original_language: "ml",
+                    "primary_release_date.lte": today,
+                    sort_by: "primary_release_date.desc",
+                    page: p
+                }
+            })
+        );
 
-    const responses = await Promise.all(promises);
-    const results = responses.flatMap(r => r.data.results || []);
+        const responses = await Promise.all(promises);
+        results = responses.flatMap(r => r.data.results || []);
+    }
 
     // Process items in chunks to avoid hitting API rate limits (429)
     const batchSize = 5;
