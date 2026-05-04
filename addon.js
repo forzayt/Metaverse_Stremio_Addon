@@ -57,6 +57,7 @@ const manifest = {
             name: "Metaverse Popular",
             extra: [{ name: "search" }, { name: "skip" }]
         },
+       
         {
             type: "movie",
             id: "netflix_movies",
@@ -91,6 +92,18 @@ const manifest = {
             type: "series",
             id: "apple_series",
             name: "Metaverse Apple TV+",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+         {
+            type: "movie",
+            id: "marvel_movies",
+            name: "Metaverse Marvel",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "dc_movies",
+            name: "Metaverse DC",
             extra: [{ name: "search" }, { name: "skip" }]
         },
         {
@@ -193,6 +206,24 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
         );
         const responses = await Promise.all(promises);
         results = responses.filter(r => r !== null).flatMap(r => r.results || []);
+    } else if (id === "marvel_movies") {
+        // Fetch Marvel Movies
+        const data = await getTmdbData("https://api.themoviedb.org/3/discover/movie", {
+            api_key: TMDB_KEY,
+            with_companies: 420,
+            sort_by: "primary_release_date.desc",
+            page: page
+        }) || {};
+        results = data.results || [];
+    } else if (id === "dc_movies") {
+        // Fetch DC Movies
+        const data = await getTmdbData("https://api.themoviedb.org/3/discover/movie", {
+            api_key: TMDB_KEY,
+            with_companies: "9993|128066",
+            sort_by: "primary_release_date.desc",
+            page: page
+        }) || {};
+        results = data.results || [];
     } else if (id === "netflix_movies" || id === "netflix_series" || 
                id === "prime_movies" || id === "prime_series" || 
                id === "apple_movies" || id === "apple_series" || 
