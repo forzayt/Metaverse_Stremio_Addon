@@ -16,12 +16,25 @@ const manifest = {
             type: "movie",
             id: "popular_movies",
             name: "Metaverse Popular",
+            posterShape: "landscape",
             extra: [{ name: "search" }, { name: "skip" }]
         },
         {
             type: "series",
             id: "popular_series",
             name: "Metaverse Popular",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "netflix_movies",
+            name: "Metaverse Netflix",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "netflix_series",
+            name: "Metaverse Netflix",
             extra: [{ name: "search" }, { name: "skip" }]
         },
         {
@@ -36,15 +49,20 @@ const manifest = {
 
 const builder = new addonBuilder(manifest);
 
-/* Convert TMDB → IMDb ID */
-async function tmdbToImdb(tmdbId, type = "movie") {
+/* Convert TMDB → Detailed Metadata */
+async function getTmdbDetails(tmdbId, type = "movie") {
     try {
         const endpoint = type === "movie" ? "movie" : "tv";
         const res = await axios.get(
-            `https://api.themoviedb.org/3/${endpoint}/${tmdbId}/external_ids`,
-            { params: { api_key: TMDB_KEY } }
+            `https://api.themoviedb.org/3/${endpoint}/${tmdbId}`,
+            { 
+                params: { 
+                    api_key: TMDB_KEY,
+                    append_to_response: "external_ids"
+                } 
+            }
         );
-        return res.data.imdb_id;
+        return res.data;
     } catch {
         return null;
     }
@@ -95,6 +113,30 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
         );
         const responses = await Promise.all(promises);
         results = responses.flatMap(r => r.data.results || []);
+    } else if (id === "netflix_movies") {
+        // Fetch Netflix Movies (Provider ID 8)
+        const res = await axios.get("https://api.themoviedb.org/3/discover/movie", {
+            params: {
+                api_key: TMDB_KEY,
+                with_watch_providers: 8,
+                watch_region: "US",
+                sort_by: "popularity.desc",
+                page: page
+            }
+        });
+        results = res.data.results || [];
+    } else if (id === "netflix_series") {
+        // Fetch Netflix Series (Provider ID 8)
+        const res = await axios.get("https://api.themoviedb.org/3/discover/tv", {
+            params: {
+                api_key: TMDB_KEY,
+                with_watch_providers: 8,
+                watch_region: "US",
+                sort_by: "popularity.desc",
+                page: page
+            }
+        });
+        results = res.data.results || [];
     } else if (id === "metaverse_catalog") {
         // Fetch 3 pages to ensure sufficient content
         const promises = [page, page + 1, page + 2].map(p =>
@@ -122,14 +164,32 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
     for (let i = 0; i < results.length; i += batchSize) {
         const chunk = results.slice(i, i + batchSize);
         const chunkPromises = chunk.map(async (m) => {
-            const imdb = await tmdbToImdb(m.id, type);
-            if (!imdb) return null;
+            const details = await getTmdbDetails(m.id, type);
+            if (!details || !details.external_ids || !details.external_ids.imdb_id) return null;
+
+            const imdb = details.external_ids.imdb_id;
+            const releaseDate = details.release_date || details.first_air_date || "";
+            const year = releaseDate ? releaseDate.split("-")[0] : "";
+            const rating = details.vote_average ? details.vote_average.toFixed(1) : null;
+            const genres = details.genres ? details.genres.map(g => g.name) : [];
+            const runtime = details.runtime || (details.episode_run_time ? details.episode_run_time[0] : null);
+
             return {
                 id: imdb,
                 type: type,
-                name: m.title || m.name,
-                poster: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null,
-                description: m.overview
+                name: details.title || details.name,
+                poster: details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null,
+                background: details.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : null,
+                description: details.overview,
+                releaseInfo: year,
+                imdbRating: rating,
+                genres: genres,
+                runtime: runtime ? `${runtime} min` : null,
+                links: rating ? [{
+                    name: `★ ${rating}`,
+                    category: "label",
+                    url: `https://www.themoviedb.org/${type === "movie" ? "movie" : "tv"}/${details.id}`
+                }] : []
             };
         });
 
