@@ -39,6 +39,90 @@ const manifest = {
         },
         {
             type: "movie",
+            id: "prime_movies",
+            name: "Metaverse Prime Video",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "prime_series",
+            name: "Metaverse Prime Video",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "disney_movies",
+            name: "Metaverse Disney+",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "disney_series",
+            name: "Metaverse Disney+",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "apple_movies",
+            name: "Metaverse Apple TV+",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "apple_series",
+            name: "Metaverse Apple TV+",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "hulu_movies",
+            name: "Metaverse Hulu",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "hulu_series",
+            name: "Metaverse Hulu",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "manorama_movies",
+            name: "Metaverse Manorama Max",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "manorama_series",
+            name: "Metaverse Manorama Max",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "sony_movies",
+            name: "Metaverse SonyLIV",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "sony_series",
+            name: "Metaverse SonyLIV",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "zee_movies",
+            name: "Metaverse Zee5",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "zee_series",
+            name: "Metaverse Zee5",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
             id: "metaverse_catalog",
             name: "Metaverse Malayalam",
             extra: [{ name: "search" }, { name: "skip" }]
@@ -113,25 +197,36 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
         );
         const responses = await Promise.all(promises);
         results = responses.flatMap(r => r.data.results || []);
-    } else if (id === "netflix_movies") {
-        // Fetch Netflix Movies (Provider ID 8)
-        const res = await axios.get("https://api.themoviedb.org/3/discover/movie", {
+    } else if (id === "netflix_movies" || id === "netflix_series" || 
+               id === "prime_movies" || id === "prime_series" || 
+               id === "disney_movies" || id === "disney_series" || 
+               id === "apple_movies" || id === "apple_series" || 
+               id === "hulu_movies" || id === "hulu_series" ||
+               id === "manorama_movies" || id === "manorama_series" ||
+               id === "sony_movies" || id === "sony_series" ||
+               id === "zee_movies" || id === "zee_series") {
+        
+        const providerIds = {
+            netflix: 8,
+            prime: 119,
+            disney: 337,
+            apple: 350,
+            hulu: 15,
+            manorama: 432,
+            sony: 237,
+            zee: 232
+        };
+
+        const providerKey = id.split("_")[0];
+        const providerId = providerIds[providerKey];
+        const region = ["manorama", "sony", "zee"].includes(providerKey) ? "IN" : "US";
+        const endpoint = type === "movie" ? "discover/movie" : "discover/tv";
+
+        const res = await axios.get(`https://api.themoviedb.org/3/${endpoint}`, {
             params: {
                 api_key: TMDB_KEY,
-                with_watch_providers: 8,
-                watch_region: "US",
-                sort_by: "popularity.desc",
-                page: page
-            }
-        });
-        results = res.data.results || [];
-    } else if (id === "netflix_series") {
-        // Fetch Netflix Series (Provider ID 8)
-        const res = await axios.get("https://api.themoviedb.org/3/discover/tv", {
-            params: {
-                api_key: TMDB_KEY,
-                with_watch_providers: 8,
-                watch_region: "US",
+                with_watch_providers: providerId,
+                watch_region: region,
                 sort_by: "popularity.desc",
                 page: page
             }
