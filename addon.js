@@ -1,7 +1,8 @@
 const { addonBuilder } = require("stremio-addon-sdk");
 const axios = require("axios");
 
-const TMDB_KEY = "b8e31efed6de570178942a39601e84b0";
+const TMDB_KEY = process.env.TMDB_KEY;
+const RPDB_KEY = process.env.RPDB_KEY;
 
 const cache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 1 day in ms
@@ -289,11 +290,14 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
             const genres = details.genres ? details.genres.map(g => g.name) : [];
             const runtime = details.runtime || (details.episode_run_time ? details.episode_run_time[0] : null);
 
+            const tmdbPoster = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null;
+            const rpdbPoster = imdb ? `https://api.ratingposterdb.com/${RPDB_KEY}/imdb/poster-default/${imdb}.jpg?fallback=true` : tmdbPoster;
+
             return {
                 id: imdb,
                 type: type,
                 name: details.title || details.name,
-                poster: details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null,
+                poster: rpdbPoster || tmdbPoster,
                 background: details.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : null,
                 description: details.overview,
                 releaseInfo: year,
@@ -319,10 +323,22 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
 builder.defineMetaHandler(async ({ type, id }) => {
     if (type !== "movie" && type !== "series") return { meta: null };
 
-    const res = await axios.get(
-        `https://v3-cinemeta.strem.io/meta/${type}/${id}.json`
-    );
-    return res.data;
+    try {
+        const res = await axios.get(
+            `https://v3-cinemeta.strem.io/meta/${type}/${id}.json`
+        );
+        const meta = res.data.meta;
+        if (meta && id.startsWith('tt')) {
+            const cinemetaPoster = meta.poster;
+            meta.poster = `https://api.ratingposterdb.com/${RPDB_KEY}/imdb/poster-default/${id}.jpg?fallback=true`;
+            // Fallback to cinemeta poster if RPDB URL generation failed (unlikely given it's a string template)
+            meta.poster = meta.poster || cinemetaPoster;
+        }
+        return { meta };
+    } catch (error) {
+        console.error(`Meta Handler Error: ${error.message}`);
+        return { meta: null };
+    }
 });
 
 module.exports = builder.getInterface();
