@@ -10,11 +10,17 @@ const manifest = {
     description: "The only Metadata addon for stremio",
     logo: "https://forzayt.github.io/Metaverse_Stremio_Addon/images/logo.png",
     resources: ["catalog", "meta"],
-    types: ["movie"],
+    types: ["movie", "series"],
     catalogs: [
         {
             type: "movie",
             id: "popular_movies",
+            name: "Metaverse Popular",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "series",
+            id: "popular_series",
             name: "Metaverse Popular",
             extra: [{ name: "search" }, { name: "skip" }]
         },
@@ -31,10 +37,11 @@ const manifest = {
 const builder = new addonBuilder(manifest);
 
 /* Convert TMDB → IMDb ID */
-async function tmdbToImdb(tmdbId) {
+async function tmdbToImdb(tmdbId, type = "movie") {
     try {
+        const endpoint = type === "movie" ? "movie" : "tv";
         const res = await axios.get(
-            `https://api.themoviedb.org/3/movie/${tmdbId}/external_ids`,
+            `https://api.themoviedb.org/3/${endpoint}/${tmdbId}/external_ids`,
             { params: { api_key: TMDB_KEY } }
         );
         return res.data.imdb_id;
@@ -45,7 +52,7 @@ async function tmdbToImdb(tmdbId) {
 
 /* Malayalam Catalog */
 builder.defineCatalogHandler(async ({ type, id, extra }) => {
-    if (type !== "movie") return { metas: [] };
+    if (type !== "movie" && type !== "series") return { metas: [] };
 
     const skip = extra?.skip ? parseInt(extra.skip) : 0;
     const page = Math.round(skip / 20) + 1;
@@ -55,7 +62,8 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
 
     if (extra?.search) {
         // Handle search
-        const res = await axios.get("https://api.themoviedb.org/3/search/movie", {
+        const endpoint = type === "movie" ? "movie" : "tv";
+        const res = await axios.get(`https://api.themoviedb.org/3/search/${endpoint}`, {
             params: {
                 api_key: TMDB_KEY,
                 query: extra.search,
@@ -67,6 +75,18 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
         // Fetch Popular Movies
         const promises = [page, page + 1].map(p =>
             axios.get("https://api.themoviedb.org/3/movie/popular", {
+                params: {
+                    api_key: TMDB_KEY,
+                    page: p
+                }
+            })
+        );
+        const responses = await Promise.all(promises);
+        results = responses.flatMap(r => r.data.results || []);
+    } else if (id === "popular_series") {
+        // Fetch Popular Series
+        const promises = [page, page + 1].map(p =>
+            axios.get("https://api.themoviedb.org/3/tv/popular", {
                 params: {
                     api_key: TMDB_KEY,
                     page: p
@@ -102,12 +122,12 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
     for (let i = 0; i < results.length; i += batchSize) {
         const chunk = results.slice(i, i + batchSize);
         const chunkPromises = chunk.map(async (m) => {
-            const imdb = await tmdbToImdb(m.id);
+            const imdb = await tmdbToImdb(m.id, type);
             if (!imdb) return null;
             return {
                 id: imdb,
-                type: "movie",
-                name: m.title,
+                type: type,
+                name: m.title || m.name,
                 poster: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null,
                 description: m.overview
             };
@@ -122,10 +142,10 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
 
 /* Cinemeta Metadata */
 builder.defineMetaHandler(async ({ type, id }) => {
-    if (type !== "movie") return { meta: null };
+    if (type !== "movie" && type !== "series") return { meta: null };
 
     const res = await axios.get(
-        `https://v3-cinemeta.strem.io/meta/movie/${id}.json`
+        `https://v3-cinemeta.strem.io/meta/${type}/${id}.json`
     );
     return res.data;
 });
