@@ -3,6 +3,33 @@ const axios = require("axios");
 
 const TMDB_KEY = "b8e31efed6de570178942a39601e84b0";
 
+const cache = new Map();
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 1 day in ms
+
+async function getTmdbData(url, params) {
+    const cacheKey = url + JSON.stringify(params);
+    const cached = cache.get(cacheKey);
+    
+    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+        return cached.data;
+    }
+
+    const res = await axios.get(url, { params });
+    cache.set(cacheKey, { data: res.data, timestamp: Date.now() });
+    
+    // Cleanup old cache entries occasionally
+    if (cache.size > 1000) {
+        const now = Date.now();
+        for (const [key, value] of cache.entries()) {
+            if (now - value.timestamp > CACHE_DURATION) {
+                cache.delete(key);
+            }
+        }
+    }
+    
+    return res.data;
+}
+
 const manifest = {
     id: "metaverse",
     version: "1.0.0",
@@ -137,16 +164,10 @@ const builder = new addonBuilder(manifest);
 async function getTmdbDetails(tmdbId, type = "movie") {
     try {
         const endpoint = type === "movie" ? "movie" : "tv";
-        const res = await axios.get(
-            `https://api.themoviedb.org/3/${endpoint}/${tmdbId}`,
-            { 
-                params: { 
-                    api_key: TMDB_KEY,
-                    append_to_response: "external_ids"
-                } 
-            }
-        );
-        return res.data;
+        return await getTmdbData(`https://api.themoviedb.org/3/${endpoint}/${tmdbId}`, {
+            api_key: TMDB_KEY,
+            append_to_response: "external_ids"
+        });
     } catch {
         return null;
     }
@@ -165,38 +186,32 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
     if (extra?.search) {
         // Handle search
         const endpoint = type === "movie" ? "movie" : "tv";
-        const res = await axios.get(`https://api.themoviedb.org/3/search/${endpoint}`, {
-            params: {
-                api_key: TMDB_KEY,
-                query: extra.search,
-                page: 1
-            }
+        const data = await getTmdbData(`https://api.themoviedb.org/3/search/${endpoint}`, {
+            api_key: TMDB_KEY,
+            query: extra.search,
+            page: 1
         });
-        results = res.data.results || [];
+        results = data.results || [];
     } else if (id === "popular_movies") {
         // Fetch Popular Movies
         const promises = [page, page + 1].map(p =>
-            axios.get("https://api.themoviedb.org/3/movie/popular", {
-                params: {
-                    api_key: TMDB_KEY,
-                    page: p
-                }
+            getTmdbData("https://api.themoviedb.org/3/movie/popular", {
+                api_key: TMDB_KEY,
+                page: p
             })
         );
         const responses = await Promise.all(promises);
-        results = responses.flatMap(r => r.data.results || []);
+        results = responses.flatMap(r => r.results || []);
     } else if (id === "popular_series") {
         // Fetch Popular Series
         const promises = [page, page + 1].map(p =>
-            axios.get("https://api.themoviedb.org/3/tv/popular", {
-                params: {
-                    api_key: TMDB_KEY,
-                    page: p
-                }
+            getTmdbData("https://api.themoviedb.org/3/tv/popular", {
+                api_key: TMDB_KEY,
+                page: p
             })
         );
         const responses = await Promise.all(promises);
-        results = responses.flatMap(r => r.data.results || []);
+        results = responses.flatMap(r => r.results || []);
     } else if (id === "netflix_movies" || id === "netflix_series" || 
                id === "prime_movies" || id === "prime_series" || 
                id === "disney_movies" || id === "disney_series" || 
@@ -222,32 +237,28 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
         const region = ["manorama", "sony", "zee"].includes(providerKey) ? "IN" : "US";
         const endpoint = type === "movie" ? "discover/movie" : "discover/tv";
 
-        const res = await axios.get(`https://api.themoviedb.org/3/${endpoint}`, {
-            params: {
-                api_key: TMDB_KEY,
-                with_watch_providers: providerId,
-                watch_region: region,
-                sort_by: "popularity.desc",
-                page: page
-            }
+        const data = await getTmdbData(`https://api.themoviedb.org/3/${endpoint}`, {
+            api_key: TMDB_KEY,
+            with_watch_providers: providerId,
+            watch_region: region,
+            sort_by: "popularity.desc",
+            page: page
         });
-        results = res.data.results || [];
+        results = data.results || [];
     } else if (id === "metaverse_catalog") {
         // Fetch 3 pages to ensure sufficient content
         const promises = [page, page + 1, page + 2].map(p =>
-            axios.get("https://api.themoviedb.org/3/discover/movie", {
-                params: {
-                    api_key: TMDB_KEY,
-                    with_original_language: "ml",
-                    "primary_release_date.lte": today,
-                    sort_by: "primary_release_date.desc",
-                    page: p
-                }
+            getTmdbData("https://api.themoviedb.org/3/discover/movie", {
+                api_key: TMDB_KEY,
+                with_original_language: "ml",
+                "primary_release_date.lte": today,
+                sort_by: "primary_release_date.desc",
+                page: p
             })
         );
 
         const responses = await Promise.all(promises);
-        results = responses.flatMap(r => r.data.results || []);
+        results = responses.flatMap(r => r.results || []);
     } else {
         return { metas: [] };
     }
