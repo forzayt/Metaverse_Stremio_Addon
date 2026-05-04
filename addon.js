@@ -7,27 +7,32 @@ const cache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 1 day in ms
 
 async function getTmdbData(url, params) {
-    const cacheKey = url + JSON.stringify(params);
-    const cached = cache.get(cacheKey);
-    
-    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
-        return cached.data;
-    }
+    try {
+        const cacheKey = url + JSON.stringify(params);
+        const cached = cache.get(cacheKey);
+        
+        if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+            return cached.data;
+        }
 
-    const res = await axios.get(url, { params });
-    cache.set(cacheKey, { data: res.data, timestamp: Date.now() });
-    
-    // Cleanup old cache entries occasionally
-    if (cache.size > 1000) {
-        const now = Date.now();
-        for (const [key, value] of cache.entries()) {
-            if (now - value.timestamp > CACHE_DURATION) {
-                cache.delete(key);
+        const res = await axios.get(url, { params });
+        cache.set(cacheKey, { data: res.data, timestamp: Date.now() });
+        
+        // Cleanup old cache entries occasionally
+        if (cache.size > 1000) {
+            const now = Date.now();
+            for (const [key, value] of cache.entries()) {
+                if (now - value.timestamp > CACHE_DURATION) {
+                    cache.delete(key);
+                }
             }
         }
+        
+        return res.data;
+    } catch (error) {
+        console.error(`TMDB API Error: ${error.message}`);
+        return null;
     }
-    
-    return res.data;
 }
 
 const manifest = {
@@ -201,7 +206,7 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
             })
         );
         const responses = await Promise.all(promises);
-        results = responses.flatMap(r => r.results || []);
+        results = responses.filter(r => r !== null).flatMap(r => r.results || []);
     } else if (id === "popular_series") {
         // Fetch Popular Series
         const promises = [page, page + 1].map(p =>
@@ -211,7 +216,7 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
             })
         );
         const responses = await Promise.all(promises);
-        results = responses.flatMap(r => r.results || []);
+        results = responses.filter(r => r !== null).flatMap(r => r.results || []);
     } else if (id === "netflix_movies" || id === "netflix_series" || 
                id === "prime_movies" || id === "prime_series" || 
                id === "disney_movies" || id === "disney_series" || 
@@ -223,8 +228,8 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
         
         const providerIds = {
             netflix: 8,
-            prime: 119,
-            disney: 337,
+            prime: "119|9",
+            disney: 122,
             apple: 350,
             hulu: 15,
             manorama: 432,
@@ -234,16 +239,17 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
 
         const providerKey = id.split("_")[0];
         const providerId = providerIds[providerKey];
-        const region = ["manorama", "sony", "zee"].includes(providerKey) ? "IN" : "US";
+        const region = providerKey === "hulu" ? "US" : "IN";
         const endpoint = type === "movie" ? "discover/movie" : "discover/tv";
 
         const data = await getTmdbData(`https://api.themoviedb.org/3/${endpoint}`, {
             api_key: TMDB_KEY,
             with_watch_providers: providerId,
             watch_region: region,
+            with_watch_monetization_types: "flatrate|free|ads",
             sort_by: "popularity.desc",
             page: page
-        });
+        }) || {};
         results = data.results || [];
     } else if (id === "metaverse_catalog") {
         // Fetch 3 pages to ensure sufficient content
@@ -258,7 +264,7 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
         );
 
         const responses = await Promise.all(promises);
-        results = responses.flatMap(r => r.results || []);
+        results = responses.filter(r => r !== null).flatMap(r => r.results || []);
     } else {
         return { metas: [] };
     }
