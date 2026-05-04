@@ -20,7 +20,7 @@ Metaverse is a comprehensive metadata discovery addon for Stremio, designed to p
 
 ---
 
-![Metaverse Demo](images/demo.png)
+![Metaverse Demo](https://forzayt.github.io/Metaverse_Stremio_Addon/images/demo.png)
 
 
 ## 🧱 How It Works
