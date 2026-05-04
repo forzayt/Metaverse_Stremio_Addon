@@ -148,6 +148,18 @@ const manifest = {
             id: "metaverse_catalog",
             name: "Metaverse Malayalam",
             extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "tamil_movies",
+            name: "Metaverse Tamil",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
+            id: "hindi_movies",
+            name: "Metaverse Hindi",
+            extra: [{ name: "search" }, { name: "skip" }]
         }
     ],
     idPrefixes: ["tt"]
@@ -255,12 +267,18 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
             page: page
         }) || {};
         results = data.results || [];
-    } else if (id === "metaverse_catalog") {
+    } else if (id === "metaverse_catalog" || id === "tamil_movies" || id === "hindi_movies") {
+        const languages = {
+            "metaverse_catalog": "ml",
+            "tamil_movies": "ta",
+            "hindi_movies": "hi"
+        };
+        const lang = languages[id];
         // Fetch 3 pages to ensure sufficient content
         const promises = [page, page + 1, page + 2].map(p =>
             getTmdbData("https://api.themoviedb.org/3/discover/movie", {
                 api_key: TMDB_KEY,
-                with_original_language: "ml",
+                with_original_language: lang,
                 "primary_release_date.lte": today,
                 sort_by: "primary_release_date.desc",
                 page: p
