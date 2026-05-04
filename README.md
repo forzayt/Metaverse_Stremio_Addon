@@ -6,6 +6,7 @@ Metaverse is a comprehensive metadata discovery addon for Stremio, designed to p
 
 ---
 
+
 ## ✨ Features
 
 * 🚀 **Multi-Platform Catalogs**: Discovery content from Netflix, Amazon Prime, Apple TV+, Hulu, and more.
