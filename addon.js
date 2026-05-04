@@ -14,8 +14,14 @@ const manifest = {
     catalogs: [
         {
             type: "movie",
+            id: "popular_movies",
+            name: "Metaverse Popular",
+            extra: [{ name: "search" }, { name: "skip" }]
+        },
+        {
+            type: "movie",
             id: "metaverse_catalog",
-            name: "Metaverse",
+            name: "Metaverse Malayalam",
             extra: [{ name: "search" }, { name: "skip" }]
         }
     ],
@@ -39,7 +45,7 @@ async function tmdbToImdb(tmdbId) {
 
 /* Malayalam Catalog */
 builder.defineCatalogHandler(async ({ type, id, extra }) => {
-    if (type !== "movie" || id !== "metaverse_catalog") return { metas: [] };
+    if (type !== "movie") return { metas: [] };
 
     const skip = extra?.skip ? parseInt(extra.skip) : 0;
     const page = Math.round(skip / 20) + 1;
@@ -57,7 +63,19 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
             }
         });
         results = res.data.results || [];
-    } else {
+    } else if (id === "popular_movies") {
+        // Fetch Popular Movies
+        const promises = [page, page + 1].map(p =>
+            axios.get("https://api.themoviedb.org/3/movie/popular", {
+                params: {
+                    api_key: TMDB_KEY,
+                    page: p
+                }
+            })
+        );
+        const responses = await Promise.all(promises);
+        results = responses.flatMap(r => r.data.results || []);
+    } else if (id === "metaverse_catalog") {
         // Fetch 3 pages to ensure sufficient content
         const promises = [page, page + 1, page + 2].map(p =>
             axios.get("https://api.themoviedb.org/3/discover/movie", {
@@ -73,6 +91,8 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
 
         const responses = await Promise.all(promises);
         results = responses.flatMap(r => r.data.results || []);
+    } else {
+        return { metas: [] };
     }
 
     // Process items in chunks to avoid hitting API rate limits (429)
