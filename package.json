@@ -7,7 +7,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "stremio-addon-sdk": "^1.1.0",
-    "axios": "^1.6.0"
+    "axios": "^1.16.0",
+    "stremio-addon-sdk": "^1.1.0"
   }
 }
