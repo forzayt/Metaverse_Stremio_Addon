@@ -2,6 +2,7 @@
 
 Metaverse is a comprehensive metadata discovery addon for Stremio, designed to provide high-quality movie and series information from various streaming platforms and regional cinema. It bridges the gap between discovery and playback by providing a rich browsing experience.
 
+
 > **Metaverse does NOT host, store, or distribute any video content.** It is a metadata-only provider that works alongside your existing streaming addons.
 
 ---
@@ -18,6 +19,9 @@ Metaverse is a comprehensive metadata discovery addon for Stremio, designed to p
 * 💾 **Smart Caching**: In-memory caching for TMDB requests to ensure lightning-fast responses and stay within API limits.
 
 ---
+
+![Metaverse Demo](images/demo.png)
+
 
 ## 🧱 How It Works
 
