@@ -39,9 +39,9 @@ async function getTmdbData(url, params) {
 const manifest = {
     id: "metaverse",
     version: "1.0.0",
-    name: "MalluFlix",
+    name: "Metaverse",
     description: "The only Metadata addon for stremio",
-    logo: "https://forzayt.github.io/Metaverse_Stremio_Addon/images/logoo.jpg",
+    logo: "https://forzayt.github.io/Metaverse_Stremio_Addon/images/logo.png",
     resources: ["catalog", "meta"],
     types: ["movie", "series"],
     catalogs: [
