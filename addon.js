@@ -41,7 +41,7 @@ const manifest = {
     version: "1.0.0",
     name: "MalluFlix",
     description: "The only Metadata addon for stremio",
-    logo: "https://forzayt.github.io/Metaverse_Stremio_Addon/images/logo.png",
+    logo: "https://forzayt.github.io/Metaverse_Stremio_Addon/images/logoo.jpg",
     resources: ["catalog", "meta"],
     types: ["movie", "series"],
     catalogs: [
