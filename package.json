@@ -1,14 +1,12 @@
 {
-  "name": "metaverse",
+  "name": "stremio-addon",
   "version": "1.0.0",
-  "description": "The Metaverse Stremio Addon",
+  "description": "A clean Stremio addon base",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "axios": "^1.16.0",
-    "dotenv": "^17.4.2",
     "stremio-addon-sdk": "^1.1.0"
   }
 }
