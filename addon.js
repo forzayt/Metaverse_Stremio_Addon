@@ -1,31 +1,35 @@
 const { addonBuilder } = require("stremio-addon-sdk");
+const sources = require("./sources");
+
+const PUBLIC_URL = (process.env.PUBLIC_URL || "https://forzayt.github.io/Metaverse_Stremio_Addon").replace(/\/+$/, "");
 
 const manifest = {
-    id: "org.stremio.example",
+    id: "metaverse",
     version: "1.0.0",
-    name: "Stremio Addon",
-    description: "A clean Stremio addon base.",
-    resources: ["catalog", "meta"],
+    name: "METAVERSE",
+    description: "METAVERSE stream sources for Stremio.",
+    logo: `${PUBLIC_URL}/images/logo.png`,
+    resources: ["stream"],
     types: ["movie", "series"],
-    catalogs: [
-        {
-            type: "movie",
-            id: "example_catalog",
-            name: "Example Catalog",
-            extra: [{ name: "search" }, { name: "skip" }]
-        }
-    ],
+    catalogs: [],
     idPrefixes: ["tt"]
 };
 
 const builder = new addonBuilder(manifest);
 
-builder.defineCatalogHandler(async () => {
-    return { metas: [] };
-});
+builder.defineStreamHandler(async ({ type, id }) => {
+    if (!id) return { streams: [] };
 
-builder.defineMetaHandler(async () => {
-    return { meta: null };
+    const results = await Promise.all(sources.map(async (source) => {
+        try {
+            return await source.getStreams({ type, id });
+        } catch (error) {
+            console.error(`Stream source "${source.id}" failed for ${type} ${id}:`, error.message);
+            return [];
+        }
+    }));
+
+    return { streams: results.flat() };
 });
 
 module.exports = builder.getInterface();
